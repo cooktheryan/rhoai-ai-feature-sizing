@@ -18,7 +18,12 @@ fi
 mkdir -p output/python-rag output/session-contexts
 
 echo "---> Starting LlamaDeploy API server in background"
-nohup python -m llama_deploy.apiserver --host 0.0.0.0 --port ${PORT:-4501} > llamadeploy.log 2>&1 &
+nohup python -c "
+import uvicorn
+from llama_deploy.apiserver.server import create_api_server
+app = create_api_server()
+uvicorn.run(app, host='0.0.0.0', port=${PORT:-4501})
+" > llamadeploy.log 2>&1 &
 LLAMADEPLOY_PID=$!
 
 # Wait for API server to start
