@@ -26,7 +26,7 @@ echo "---> Waiting for LlamaDeploy API server to start..."
 sleep 15
 
 echo "---> Deploying workflows"
-python -m llama_deploy.cli deploy deployment.yml || echo "Warning: Workflow deployment failed"
+llamactl deploy deployment.yml || echo "Warning: Workflow deployment failed"
 
 echo "---> RHOAI AI Feature Sizing Platform started"
 echo "---> LlamaDeploy PID: $LLAMADEPLOY_PID"
