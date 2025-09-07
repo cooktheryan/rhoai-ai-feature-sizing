@@ -57,7 +57,29 @@ You must also install `pnpm` globally
 npm i -g pnpm
 ```
 
-Please setup their API keys in the `src/.env` file.
+## Environment Setup
+
+1. **Copy the environment template**:
+   ```bash
+   cp env.template env.local
+   ```
+
+2. **Configure your API keys** in `env.local`:
+   - Set `LLM_PROVIDER` to your preferred provider (`openai`, `anthropic`, `ollama`, or `openshift_ai`)
+   - Add your API keys and endpoints for the chosen provider
+   - **Example for OpenShift AI**:
+     ```
+     LLM_PROVIDER=openshift_ai
+     OPENSHIFT_AI_API_KEY=your_actual_api_key_here
+     OPENSHIFT_AI_BASE_URL=https://your-openshift-ai-endpoint/v1
+     ```
+
+3. **Copy to the source directory**:
+   ```bash
+   cp env.local src/.env
+   ```
+
+**⚠️ Security Note**: Never commit `env.local` or `src/.env` to version control. These files contain sensitive API keys.
 
 ## Installation
 
@@ -128,6 +150,31 @@ Note that the task_id and session_id are returned when creating a new task.
 
 We have prepared a comprehensive RFE Builder workflow system that helps you interactively build RFEs with multi-agent collaboration, generate multiple artifacts, and edit them through chat.
 The main workflow is in [`src/rfe_builder_workflow.py`](src/rfe_builder_workflow.py).
+
+## OpenShift Deployment
+
+This application can be deployed to OpenShift using git-based deployment (no container registry required):
+
+### Quick Deploy to OpenShift
+
+1. **From OpenShift Web Console**:
+   - Create new project or use existing
+   - Click "Add+" → "From Git"
+   - Enter your git repository URL
+   - OpenShift will auto-detect the `.openshift` configuration
+
+2. **From Command Line**:
+   ```bash
+   oc new-project rhoai-ai-feature-sizing
+   oc process -f .openshift/templates/rhoai-ai-feature-sizing.yaml \
+     -p SOURCE_REPOSITORY_URL=https://github.com/your-org/rhoai-ai-feature-sizing.git \
+     -p LLM_PROVIDER=openshift_ai \
+     -p OPENSHIFT_AI_API_KEY=your-api-key \
+     -p OPENSHIFT_AI_BASE_URL=https://your-endpoint/v1 \
+     | oc create -f -
+   ```
+
+See [.openshift/README.md](.openshift/README.md) for detailed deployment instructions.
 
 ## Customize the UI
 

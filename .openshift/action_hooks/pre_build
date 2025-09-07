@@ -1,0 +1,11 @@
+#!/bin/bash
+# OpenShift pre-build hook
+
+set -e
+
+echo "---> Installing uv package manager"
+curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="$HOME/.cargo/bin:$PATH"
+
+echo "---> uv version:"
+uv --version

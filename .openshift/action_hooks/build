@@ -1,0 +1,23 @@
+#!/bin/bash
+# OpenShift build hook
+
+set -e
+
+echo "---> Building RHOAI AI Feature Sizing Platform"
+
+# Ensure uv is in PATH
+export PATH="$HOME/.cargo/bin:$PATH"
+
+echo "---> Syncing Python dependencies with uv"
+uv sync --frozen
+
+echo "---> Installing Node.js dependencies for UI"
+cd ui
+npm ci --production
+npm run build
+cd ..
+
+echo "---> Generating RAG indices"
+uv run generate || echo "Warning: RAG index generation failed, will use empty indices"
+
+echo "---> Build completed successfully"

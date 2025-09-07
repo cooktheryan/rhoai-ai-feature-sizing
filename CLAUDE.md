@@ -43,6 +43,16 @@ npm run build
 3. Start frontend: `cd ui && npm run dev` (serves on port 3000)
 4. Access UI at: http://localhost:4501/deployments/rhoai-ai-feature-sizing/ui
 
+## OpenShift Deployment
+
+The project includes `.openshift/` configuration for git-based deployment to OpenShift (no container registry required):
+
+- **Templates**: OpenShift template in `.openshift/templates/`
+- **Action Hooks**: Build and start scripts in `.openshift/action_hooks/`
+- **Documentation**: Detailed deployment guide in `.openshift/README.md`
+
+Deploy with: `oc new-app` using the git repository URL, and OpenShift will automatically detect and use the `.openshift` configuration.
+
 ## Architecture Overview
 
 This is a production-ready multi-agent system for analyzing Request for Enhancement (RFE) descriptions. The system uses **LlamaDeploy** for Python workflow orchestration and **@llamaindex/server** for the TypeScript frontend.
@@ -82,7 +92,11 @@ This is a production-ready multi-agent system for analyzing Request for Enhancem
 - **Agent Personas**: Add/modify YAML files in `src/agents/`
 - **Knowledge Sources**: Place documentation in `data/` or configure GitHub repos in agent YAML
 - **UI Customization**: Modify `ui/index.ts` for starter questions and component configuration
-- **Environment**: Copy `env.template` to `src/.env` and configure API keys
+- **Environment Setup**: 
+  1. Copy `env.template` to `env.local`
+  2. Fill in your actual API keys and endpoints in `env.local`
+  3. Copy `env.local` to `src/.env` for the application to use
+  4. **Never commit `env.local` or `src/.env` to version control**
 
 ### File Structure
 

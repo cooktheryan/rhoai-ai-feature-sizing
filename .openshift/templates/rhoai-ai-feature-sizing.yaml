@@ -1,0 +1,287 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: rhoai-ai-feature-sizing
+  annotations:
+    description: "RHOAI AI Feature Sizing Platform - Multi-agent RFE analysis system"
+    tags: "python,nodejs,ai,llama-index,llamadeploy"
+    openshift.io/display-name: "RHOAI AI Feature Sizing"
+    openshift.io/provider-display-name: "RHOAI Team"
+    openshift.io/documentation-url: "https://github.com/your-org/rhoai-ai-feature-sizing"
+    openshift.io/support-url: "https://github.com/your-org/rhoai-ai-feature-sizing/issues"
+    iconClass: "icon-python"
+parameters:
+  - name: APPLICATION_NAME
+    displayName: "Application Name"
+    description: "The name for the application"
+    value: "rhoai-ai-feature-sizing"
+    required: true
+  - name: SOURCE_REPOSITORY_URL
+    displayName: "Git Repository URL"
+    description: "The URL of the repository with your application source code"
+    value: "https://github.com/your-org/rhoai-ai-feature-sizing.git"
+    required: true
+  - name: SOURCE_REPOSITORY_REF
+    displayName: "Git Reference"
+    description: "Set this to a branch name, tag or other ref of your repository"
+    value: "main"
+    required: true
+  - name: LLM_PROVIDER
+    displayName: "LLM Provider"
+    description: "LLM provider to use (openai, anthropic, ollama, openshift_ai)"
+    value: "openshift_ai"
+    required: true
+  - name: OPENAI_API_KEY
+    displayName: "OpenAI API Key"
+    description: "OpenAI API key (if using OpenAI provider)"
+    value: ""
+  - name: ANTHROPIC_API_KEY
+    displayName: "Anthropic API Key"  
+    description: "Anthropic API key (if using Anthropic provider)"
+    value: ""
+  - name: OPENSHIFT_AI_API_KEY
+    displayName: "OpenShift AI API Key"
+    description: "OpenShift AI API key (if using OpenShift AI provider)"
+    value: ""
+    required: false
+  - name: OPENSHIFT_AI_BASE_URL
+    displayName: "OpenShift AI Base URL"
+    description: "OpenShift AI base URL (if using OpenShift AI provider)"
+    value: ""
+    required: false
+objects:
+  # BuildConfig for Python backend
+  - apiVersion: build.openshift.io/v1
+    kind: BuildConfig
+    metadata:
+      name: "${APPLICATION_NAME}"
+      labels:
+        app: "${APPLICATION_NAME}"
+        component: backend
+    spec:
+      source:
+        type: Git
+        git:
+          uri: "${SOURCE_REPOSITORY_URL}"
+          ref: "${SOURCE_REPOSITORY_REF}"
+      strategy:
+        type: Source
+        sourceStrategy:
+          from:
+            kind: ImageStreamTag
+            name: "python:3.12-ubi8"
+            namespace: openshift
+          env:
+            - name: BUILD_LOGLEVEL
+              value: "2"
+      output:
+        to:
+          kind: ImageStreamTag
+          name: "${APPLICATION_NAME}:latest"
+      triggers:
+        - type: ConfigChange
+        - type: GitHub
+          github:
+            secret: "${APPLICATION_NAME}-webhook-secret"
+        - type: ImageChange
+          imageChange: {}
+
+  # ImageStream
+  - apiVersion: image.openshift.io/v1
+    kind: ImageStream
+    metadata:
+      name: "${APPLICATION_NAME}"
+      labels:
+        app: "${APPLICATION_NAME}"
+    spec:
+      lookupPolicy:
+        local: false
+
+  # DeploymentConfig
+  - apiVersion: apps.openshift.io/v1
+    kind: DeploymentConfig
+    metadata:
+      name: "${APPLICATION_NAME}"
+      labels:
+        app: "${APPLICATION_NAME}"
+        component: backend
+    spec:
+      replicas: 1
+      selector:
+        app: "${APPLICATION_NAME}"
+        component: backend
+      strategy:
+        type: Rolling
+        rollingParams:
+          updatePeriodSeconds: 1
+          intervalSeconds: 1
+          timeoutSeconds: 600
+          maxUnavailable: 25%
+          maxSurge: 25%
+      template:
+        metadata:
+          labels:
+            app: "${APPLICATION_NAME}"
+            component: backend
+        spec:
+          containers:
+            - name: "${APPLICATION_NAME}"
+              image: "${APPLICATION_NAME}:latest"
+              ports:
+                - containerPort: 4501
+                  protocol: TCP
+                  name: api
+                - containerPort: 3000
+                  protocol: TCP
+                  name: ui
+              env:
+                - name: LLM_PROVIDER
+                  value: "${LLM_PROVIDER}"
+                - name: OPENAI_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: "${APPLICATION_NAME}-secrets"
+                      key: openai-api-key
+                      optional: true
+                - name: ANTHROPIC_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: "${APPLICATION_NAME}-secrets"
+                      key: anthropic-api-key
+                      optional: true
+                - name: OPENSHIFT_AI_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: "${APPLICATION_NAME}-secrets"
+                      key: openshift-ai-api-key
+                      optional: true
+                - name: OPENSHIFT_AI_BASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: "${APPLICATION_NAME}-secrets"
+                      key: openshift-ai-base-url
+                      optional: true
+                - name: PORT
+                  value: "4501"
+                - name: NODE_ENV
+                  value: "production"
+              resources:
+                limits:
+                  memory: "2Gi"
+                  cpu: "1000m"
+                requests:
+                  memory: "1Gi"
+                  cpu: "500m"
+              livenessProbe:
+                httpGet:
+                  path: /status/
+                  port: 4501
+                initialDelaySeconds: 60
+                timeoutSeconds: 3
+                periodSeconds: 10
+                failureThreshold: 3
+              readinessProbe:
+                httpGet:
+                  path: /status/
+                  port: 4501
+                initialDelaySeconds: 10
+                timeoutSeconds: 3
+                periodSeconds: 5
+                failureThreshold: 3
+          restartPolicy: Always
+      triggers:
+        - type: ConfigChange
+        - type: ImageChange
+          imageChangeParams:
+            automatic: true
+            containerNames:
+              - "${APPLICATION_NAME}"
+            from:
+              kind: ImageStreamTag
+              name: "${APPLICATION_NAME}:latest"
+
+  # Secret for API keys
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: "${APPLICATION_NAME}-secrets"
+      labels:
+        app: "${APPLICATION_NAME}"
+    type: Opaque
+    stringData:
+      openai-api-key: "${OPENAI_API_KEY}"
+      anthropic-api-key: "${ANTHROPIC_API_KEY}"
+      openshift-ai-api-key: "${OPENSHIFT_AI_API_KEY}"
+      openshift-ai-base-url: "${OPENSHIFT_AI_BASE_URL}"
+
+  # Service for API
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: "${APPLICATION_NAME}-api"
+      labels:
+        app: "${APPLICATION_NAME}"
+        component: backend
+    spec:
+      ports:
+        - name: api
+          port: 4501
+          targetPort: 4501
+          protocol: TCP
+      selector:
+        app: "${APPLICATION_NAME}"
+        component: backend
+
+  # Service for UI
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: "${APPLICATION_NAME}-ui"
+      labels:
+        app: "${APPLICATION_NAME}"
+        component: frontend
+    spec:
+      ports:
+        - name: ui
+          port: 3000
+          targetPort: 3000
+          protocol: TCP
+      selector:
+        app: "${APPLICATION_NAME}"
+        component: backend
+
+  # Route for API
+  - apiVersion: route.openshift.io/v1
+    kind: Route
+    metadata:
+      name: "${APPLICATION_NAME}-api"
+      labels:
+        app: "${APPLICATION_NAME}"
+        component: backend
+    spec:
+      to:
+        kind: Service
+        name: "${APPLICATION_NAME}-api"
+        weight: 100
+      port:
+        targetPort: api
+      tls:
+        termination: edge
+
+  # Route for UI
+  - apiVersion: route.openshift.io/v1
+    kind: Route
+    metadata:
+      name: "${APPLICATION_NAME}-ui"
+      labels:
+        app: "${APPLICATION_NAME}"
+        component: frontend
+    spec:
+      to:
+        kind: Service
+        name: "${APPLICATION_NAME}-ui"
+        weight: 100
+      port:
+        targetPort: ui
+      tls:
+        termination: edge
