@@ -5,6 +5,9 @@ set -e
 
 echo "---> Starting RHOAI AI Feature Sizing Platform"
 
+# Add Python virtual environment to PATH
+source /opt/app-root/bin/activate
+
 # Copy environment template to create .env if it doesn't exist
 if [ ! -f "src/.env" ]; then
     echo "---> Creating environment file from template"
@@ -15,7 +18,7 @@ fi
 mkdir -p output/python-rag output/session-contexts
 
 echo "---> Starting LlamaDeploy API server in background"
-nohup uv run -m llama_deploy.apiserver --host 0.0.0.0 --port ${PORT:-4501} > llamadeploy.log 2>&1 &
+nohup python -m llama_deploy.apiserver --host 0.0.0.0 --port ${PORT:-4501} > llamadeploy.log 2>&1 &
 LLAMADEPLOY_PID=$!
 
 # Wait for API server to start
@@ -23,7 +26,7 @@ echo "---> Waiting for LlamaDeploy API server to start..."
 sleep 15
 
 echo "---> Deploying workflows"
-uv run llamactl deploy deployment.yml || echo "Warning: Workflow deployment failed"
+python -m llama_deploy.cli deploy deployment.yml || echo "Warning: Workflow deployment failed"
 
 echo "---> RHOAI AI Feature Sizing Platform started"
 echo "---> LlamaDeploy PID: $LLAMADEPLOY_PID"
