@@ -23,6 +23,7 @@ dependencies = [
     "aiostream>=0.5.2,<0.6.0",
     "docx2txt>=0.8,<0.9",
     "llama-index-llms-anthropic>=0.7.6",
+    "llama-index-llms-openai-like>=0.3.5",
 ]
 
 [project.scripts]

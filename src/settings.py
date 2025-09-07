@@ -44,6 +44,22 @@ class ProviderRegistry:
             },
             "package": "llama-index-llms-ollama",
         },
+        "openshift_ai": {
+            "module": "llama_index.llms.openai_like",
+            "class": "OpenAILike",
+            "defaults": {
+                "model": "llama-4-scout-17b-16e-w4a16",
+                "temperature": 0.1,
+                "streaming": False,
+                "max_tokens": 4000,
+                "api_version": "",
+                "is_chat_model": True,
+                "is_function_calling_model": False,
+                "supports_async": False,
+            },
+            "env_map": {"api_key": "OPENSHIFT_AI_API_KEY", "api_base": "OPENSHIFT_AI_BASE_URL"},
+            "package": "llama-index-llms-openai-like",
+        },
     }
 
     EMBEDDING_CONFIGS = {
