@@ -9,7 +9,7 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@llamaindex/server": "0.2.10",
+    "@llamaindex/server": "^0.4.1",
     "dotenv": "^16.4.7"
   },
   "devDependencies": {
