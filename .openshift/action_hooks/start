@@ -40,9 +40,11 @@ export UVICORN_HOST=0.0.0.0
 export LLAMADEPLOY_HOST=0.0.0.0
 export HOST=0.0.0.0
 
-# Run LlamaDeploy on port 4502 internally, proxy will forward from 4501
-INTERNAL_PORT=4502
-nohup uv run -m llama_deploy.apiserver --host 0.0.0.0 --port $INTERNAL_PORT > llamadeploy.log 2>&1 &
+# Run LlamaDeploy on its default port 4501 (localhost only)
+# The proxy will run on port 8080 and forward to 4501
+LLAMADEPLOY_PORT=4501
+PROXY_PORT=8080
+nohup uv run -m llama_deploy.apiserver --host 0.0.0.0 --port $LLAMADEPLOY_PORT > llamadeploy.log 2>&1 &
 LLAMADEPLOY_PID=$!
 
 # Wait for API server to start
@@ -52,7 +54,7 @@ sleep 10
 # Wait for server to be ready by checking the status endpoint
 echo "---> Checking if API server is responding..."
 for i in {1..30}; do
-    if curl -s http://localhost:$INTERNAL_PORT/status/ > /dev/null 2>&1; then
+    if curl -s http://localhost:$LLAMADEPLOY_PORT/status/ > /dev/null 2>&1; then
         echo "---> API server is ready!"
         break
     fi
@@ -61,7 +63,7 @@ for i in {1..30}; do
 done
 
 echo "---> Deploying workflows"
-LLAMA_DEPLOY_APISERVER_URL=http://localhost:$INTERNAL_PORT uv run llamactl deploy deployment.yml || echo "Warning: Workflow deployment failed"
+LLAMA_DEPLOY_APISERVER_URL=http://localhost:$LLAMADEPLOY_PORT uv run llamactl deploy deployment.yml || echo "Warning: Workflow deployment failed"
 
 echo "---> RHOAI AI Feature Sizing Platform started"
 echo "---> LlamaDeploy PID: $LLAMADEPLOY_PID"
@@ -73,7 +75,7 @@ echo "---> Starting port forwarding to expose API on all interfaces"
 # Check if socat is available, if not use Python proxy
 if command -v socat &> /dev/null; then
     echo "---> Using socat for port forwarding"
-    socat TCP-LISTEN:${PORT:-4501},bind=0.0.0.0,fork TCP:localhost:$INTERNAL_PORT &
+    socat TCP-LISTEN:$PROXY_PORT,bind=0.0.0.0,fork TCP:localhost:$LLAMADEPLOY_PORT &
     PROXY_PID=$!
 else
     echo "---> Using Python proxy for port forwarding"
@@ -103,7 +105,7 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
         try:
             content_length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(content_length) if content_length > 0 else None
-            target_url = f"http://localhost:4502{self.path}"
+            target_url = f"http://localhost:4501{self.path}"
             req = urllib.request.Request(target_url, data=body, method=self.command)
             
             for header, value in self.headers.items():
@@ -123,7 +125,7 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
         except Exception as e:
             self.send_error(500, f"Internal Server Error: {e}")
 
-PORT = int(os.environ.get('PORT', 4501))
+PORT = 8080
 with socketserver.TCPServer(("", PORT), ProxyHandler) as httpd:
     print(f"Proxy server running on 0.0.0.0:{PORT}")
     httpd.serve_forever()
@@ -133,8 +135,8 @@ EOF
 fi
 
 echo "---> Reverse proxy PID: $PROXY_PID"
-echo "---> API available at: http://0.0.0.0:${PORT:-4501}"
-echo "---> UI available at: http://0.0.0.0:${PORT:-4501}/deployments/rhoai-ai-feature-sizing/ui"
+echo "---> API available at: http://0.0.0.0:$PROXY_PORT"
+echo "---> UI available at: http://0.0.0.0:$PROXY_PORT/deployments/rhoai-ai-feature-sizing/ui"
 
 # Keep the container running by waiting for both processes
 wait $LLAMADEPLOY_PID $PROXY_PID

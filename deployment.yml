@@ -1,7 +1,7 @@
 name: rhoai-ai-feature-sizing
 
 control-plane:
-  port: 4502
+  port: 4501
 
 default-service: rfe-builder-workflow
 
