@@ -6,7 +6,25 @@ set -e
 echo "---> Starting RHOAI AI Feature Sizing Platform"
 
 # Ensure uv is in PATH
-export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:/opt/app-root/.cargo/bin:$PATH"
+
+# Check if uv is available, if not try alternative paths
+if ! command -v uv &> /dev/null; then
+    echo "---> uv not found in PATH, checking alternative locations..."
+    if [ -f "$HOME/.cargo/bin/uv" ]; then
+        export PATH="$HOME/.cargo/bin:$PATH"
+        echo "---> Found uv at $HOME/.cargo/bin/uv"
+    elif [ -f "/opt/app-root/.cargo/bin/uv" ]; then
+        export PATH="/opt/app-root/.cargo/bin:$PATH"
+        echo "---> Found uv at /opt/app-root/.cargo/bin/uv"
+    else
+        echo "---> ERROR: uv not found, installing..."
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        export PATH="$HOME/.cargo/bin:$PATH"
+    fi
+fi
+
+echo "---> uv version: $(uv --version)"
 
 # Copy environment template to create .env if it doesn't exist
 if [ ! -f "src/.env" ]; then
