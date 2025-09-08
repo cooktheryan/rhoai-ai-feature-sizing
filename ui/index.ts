@@ -11,6 +11,7 @@ new LlamaIndexServer({
 		componentsDir: "components",
 		layoutDir: "layout",
 		llamaDeploy: {
+			apiServerURL: "http://localhost:4501",
 			deployment: "rhoai-ai-feature-sizing",
 			workflow: "rfe-builder-workflow"
 		},

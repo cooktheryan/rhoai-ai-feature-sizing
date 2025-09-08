@@ -9,3 +9,15 @@ export PATH="$HOME/.cargo/bin:$PATH"
 
 echo "---> uv version:"
 uv --version
+
+echo "---> Installing Node.js and npm"
+# Install Node.js LTS using the official installer
+curl -fsSL https://fnm.vercel.app/install | bash
+export PATH="$HOME/.local/share/fnm:$PATH"
+eval "$(fnm env --use-on-cd)"
+fnm use --install-if-missing 20
+
+echo "---> Node.js version:"
+node --version
+echo "---> npm version:"
+npm --version

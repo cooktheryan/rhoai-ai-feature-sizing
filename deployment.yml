@@ -33,9 +33,9 @@ services:
       - python-dotenv>=1.0.0
 
 
-ui:
-  name: Chat UI
-  port: 3000
-  source:
-    type: local
-    name: ui
+# ui:
+#   name: Chat UI
+#   port: 3000
+#   source:
+#     type: local
+#     name: ui

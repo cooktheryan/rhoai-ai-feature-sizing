@@ -8,6 +8,11 @@ echo "---> Starting RHOAI AI Feature Sizing Platform"
 # Ensure uv is in PATH
 export PATH="$HOME/.cargo/bin:/opt/app-root/.cargo/bin:$PATH"
 
+# Ensure Node.js is in PATH
+export PATH="$HOME/.local/share/fnm:$PATH"
+eval "$(fnm env --use-on-cd)" 2>/dev/null || true
+export PATH="$HOME/.local/share/fnm/node-versions/v20.*/installation/bin:$PATH"
+
 # Check if uv is available, if not try alternative paths
 if ! command -v uv &> /dev/null; then
     echo "---> uv not found in PATH, checking alternative locations..."
@@ -25,6 +30,14 @@ if ! command -v uv &> /dev/null; then
 fi
 
 echo "---> uv version: $(uv --version)"
+
+# Check if Node.js is available
+if command -v node &> /dev/null; then
+    echo "---> Node.js version: $(node --version)"
+    echo "---> npm version: $(npm --version)"
+else
+    echo "---> WARNING: Node.js not found - UI server may not work"
+fi
 
 # Copy environment template to create .env if it doesn't exist
 if [ ! -f "src/.env" ]; then
@@ -65,8 +78,23 @@ done
 echo "---> Deploying workflows"
 LLAMA_DEPLOY_APISERVER_URL=http://localhost:$LLAMADEPLOY_PORT uv run llamactl deploy deployment.yml || echo "Warning: Workflow deployment failed"
 
+echo "---> Starting UI server"
+UI_PORT=3000
+cd ui
+if command -v node &> /dev/null; then
+    echo "---> Starting Node.js UI server on port $UI_PORT"
+    nohup npm start > ../ui.log 2>&1 &
+    UI_PID=$!
+    echo "---> UI server PID: $UI_PID"
+else
+    echo "---> ERROR: Node.js not available, UI server will not start"
+    UI_PID=""
+fi
+cd ..
+
 echo "---> RHOAI AI Feature Sizing Platform started"
 echo "---> LlamaDeploy PID: $LLAMADEPLOY_PID"
+echo "---> UI server PID: $UI_PID"
 
 # Since LlamaDeploy binds to localhost only, we need to run it on a different port
 # and use socat to forward from the external port
@@ -105,7 +133,14 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
         try:
             content_length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(content_length) if content_length > 0 else None
-            target_url = f"http://localhost:4501{self.path}"
+            
+            # Route requests based on path
+            if self.is_api_request():
+                target_port = 4501  # LlamaDeploy API
+            else:
+                target_port = 3000  # UI Server
+                
+            target_url = f"http://localhost:{target_port}{self.path}"
             req = urllib.request.Request(target_url, data=body, method=self.command)
             
             for header, value in self.headers.items():
@@ -124,6 +159,11 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
             self.send_error(502, f"Bad Gateway: {e}")
         except Exception as e:
             self.send_error(500, f"Internal Server Error: {e}")
+    
+    def is_api_request(self):
+        """Determine if this is an API request vs UI request"""
+        api_paths = ['/status/', '/deployments/', '/docs', '/openapi.json', '/api/']
+        return any(self.path.startswith(path) for path in api_paths)
 
 PORT = 8080
 with socketserver.TCPServer(("", PORT), ProxyHandler) as httpd:
@@ -138,5 +178,9 @@ echo "---> Reverse proxy PID: $PROXY_PID"
 echo "---> API available at: http://0.0.0.0:$PROXY_PORT"
 echo "---> UI available at: http://0.0.0.0:$PROXY_PORT/deployments/rhoai-ai-feature-sizing/ui"
 
-# Keep the container running by waiting for both processes
-wait $LLAMADEPLOY_PID $PROXY_PID
+# Keep the container running by waiting for all processes
+if [ -n "$UI_PID" ]; then
+    wait $LLAMADEPLOY_PID $UI_PID $PROXY_PID
+else
+    wait $LLAMADEPLOY_PID $PROXY_PID
+fi
