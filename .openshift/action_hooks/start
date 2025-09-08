@@ -34,6 +34,12 @@ fi
 
 echo "---> Starting LlamaDeploy API server in background"
 cd "$OPENSHIFT_REPO_DIR"
+
+# Set environment variables to ensure binding to all interfaces
+export UVICORN_HOST=0.0.0.0
+export LLAMADEPLOY_HOST=0.0.0.0
+export HOST=0.0.0.0
+
 nohup uv run -m llama_deploy.apiserver --host 0.0.0.0 --port ${PORT:-4501} > llamadeploy.log 2>&1 &
 LLAMADEPLOY_PID=$!
 
