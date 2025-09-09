@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: rhoai-app
-        image: quay.io/gkrumbach07/llama-index-demo/rhoai-ai-feature-sizing:latest
+        image: quay.io/rcook/tools:rhoai-fix
         imagePullPolicy: Always
         ports:
         - containerPort: 4501
@@ -27,23 +27,27 @@ spec:
         env:
         - name: PYTHONUNBUFFERED
           value: "1"
+        - name: UV_CACHE_DIR
+          value: "/.cache/uv"
         envFrom:
         - configMapRef:
             name: rhoai-config
         - secretRef:
             name: rhoai-secrets
         volumeMounts:
+        - name: cache
+          mountPath: /.cache
         - name: uploads-storage
           mountPath: /app/uploads
         - name: output-storage
           mountPath: /app/output
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "100m"
+            memory: "512Mi"
+            cpu: "200m"
           limits:
-            memory: "1Gi"
-            cpu: "500m"
+            memory: "4Gi"
+            cpu: "1000m"
       volumes:
       - name: uploads-storage
         persistentVolumeClaim:
@@ -51,3 +55,5 @@ spec:
       - name: output-storage
         persistentVolumeClaim:
           claimName: rhoai-output-pvc
+      - name: cache
+        emptyDir: {}
