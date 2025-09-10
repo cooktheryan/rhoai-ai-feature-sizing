@@ -36,12 +36,15 @@ spec:
         imagePullPolicy: Always
         name: rhoai-app
         ports:
-        - containerPort: 4501
-          name: api-port
-          protocol: TCP
-        - containerPort: 8000
-          name: api-server
-          protocol: TCP
+          - containerPort: 4501
+            name: control-plane
+            protocol: TCP
+          - containerPort: 8000
+            name: api-server
+            protocol: TCP
+          - containerPort: 3000
+            name: ui
+            protocol: TCP
         resources:
           limits:
             cpu: "6"
