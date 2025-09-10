@@ -30,4 +30,4 @@ jobs:
       with:
         context: .
         push: true
-        tags: quay.io/rcook/tools:rhoai
+        tags: quay.io/redhat-et/rhoai-feature-sizing
