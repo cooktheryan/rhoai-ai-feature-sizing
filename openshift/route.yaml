@@ -1,3 +1,4 @@
+---
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
@@ -27,6 +28,7 @@ metadata:
   name: rhoai-ui
 spec:
   host: ''
+  path: /deployments/rhoai-ai-feature-sizing/ui
   port:
     targetPort: ui
   tls:
