@@ -32,7 +32,7 @@ spec:
             name: rhoai-config
         - secretRef:
             name: rhoai-secrets
-        image: quay.io/rcook/tools:rhoai
+        image: quay.io/redhat-et/rhoai-feature-sizing:latest
         imagePullPolicy: Always
         name: rhoai-app
         ports:
