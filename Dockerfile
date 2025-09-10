@@ -1,12 +1,19 @@
-FROM python:3.11-slim
+FROM registry.redhat.io/ubi9/python-311@sha256:ed423c14020369e28f1a9ecb6ea74eb1e23b521c9fd82e3690bb53300086c571
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y git curl && rm -rf /var/lib/apt/lists/*
+# Ensure proper permissions for the app directory
+USER root
+RUN chown -R 1001:0 /app && chmod -R g+rwX /app
+COPY startup.sh ./
 
-# Install Node.js
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
-    apt-get install -y nodejs
+RUN chmod +x startup.sh && chown 1001:0 startup.sh
+
+USER 1001
+
+# Set UV cache directory to app directory where we have permissions
+ENV UV_CACHE_DIR=/app/.cache/uv
+RUN mkdir -p /app/.cache/uv
 
 COPY pyproject.toml ./
 COPY uv.lock ./
@@ -21,6 +28,12 @@ COPY deployment.yml ./
 
 # Install UI dependencies
 WORKDIR /app/ui
+
+# Configure npm to use user directory for global installs
+RUN mkdir -p /app/.npm-global
+ENV NPM_CONFIG_PREFIX=/app/.npm-global
+ENV PATH=/app/.npm-global/bin:$PATH
+
 RUN npm i -g pnpm
 WORKDIR /app
 
@@ -32,8 +45,5 @@ ENV HOME=/app
 RUN mkdir -p /app/.config/llamactl && chmod -R 777 /app/.config
 
 EXPOSE 4501
-
-COPY startup.sh ./
-RUN chmod +x startup.sh
 
 CMD ["./startup.sh"]
