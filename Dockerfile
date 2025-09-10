@@ -22,7 +22,6 @@ COPY deployment.yml ./
 # Install UI dependencies
 WORKDIR /app/ui
 RUN npm i -g pnpm
-RUN pnpm install
 WORKDIR /app
 
 RUN uv run generate

@@ -8,7 +8,7 @@ echo "Waiting for API server to be ready..."
 sleep 10
 
 echo "Deploying workflows..."
-uv run llamactl deploy deployment.yml
+printf "Y\nY\nY\nY\nY\n" | uv run llamactl deploy deployment.yml
 
 echo "API server is running. Bringing to foreground..."
 wait
