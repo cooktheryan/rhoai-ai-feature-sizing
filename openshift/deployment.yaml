@@ -21,6 +21,8 @@ spec:
     spec:
       containers:
       - env:
+        - name: LLM_PROVIDER
+          value: openshift_ai
         - name: PYTHONUNBUFFERED
           value: "1"
         - name: UV_CACHE_DIR
