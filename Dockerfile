@@ -4,6 +4,7 @@ WORKDIR /app
 
 # Ensure proper permissions for the app directory
 USER root
+RUN dnf -y install nc && dnf clean all
 RUN chown -R 1001:0 /app && chmod -R g+rwX /app
 COPY startup.sh ./
 
